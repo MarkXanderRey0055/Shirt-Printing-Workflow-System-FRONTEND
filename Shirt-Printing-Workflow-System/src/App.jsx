@@ -1,15 +1,12 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import Login from "../src/Components/Login.jsx"
 
 function App() {
-  const [count, setCount] = useState(0)
 
   return (
     <>
-    <h1>Hello this is a test
-    </h1>
+    <main className="bg-[#E0D9D9] min-h-screen">
+    <Login />
+    </main>
     </>
   )
 }
