@@ -1,16 +1,39 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, {useState} from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
+import Login from "../src/Components/Login.jsx";
+import Navbar from "../src/Components/Navbar.jsx";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [userRole, setUserRole] = useState(null);
+
+  const handleLogin = (role) => {
+    setUserRole(role);
+  };
+
+  const handleLogout = () => {
+    setUserRole(null);
+  };
 
   return (
-    <>
-    <h1>Hello this is a test
-    </h1>
-    </>
+    <Router>
+      <main className="bg-[#E0D9D9] min-h-screen">
+        {userRole && <Navbar userRole={userRole} onLogout={handleLogout} />}
+
+        <Routes>
+          {/* Login Route */}
+          <Route
+            path="/"
+            element={
+              userRole ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />
+            }
+          
+          />
+
+        </Routes>
+
+      </main>
+    </Router>
   )
 }
 
