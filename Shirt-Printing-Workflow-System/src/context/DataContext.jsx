@@ -11,18 +11,26 @@ export const useData = () => {
 };
 
 export const DataProvider = ({ children }) => {
-  // Initial empty state
   const [orders, setOrders] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [salesData, setSalesData] = useState([]);
   const [userRole, setUserRole] = useState('owner');
 
-  // Order functions
+  const materialConsumptionRates = {
+    'T-Shirt': { rate: 1, unit: 'pieces', description: 'One T-Shirt blank per order item' },
+    'Polo Shirt': { rate: 1, unit: 'pieces', description: 'One Polo Shirt blank per order item' },
+    'Jersey': { rate: 1, unit: 'pieces', description: 'One Jersey blank per order item' },
+    
+    'Raw Materials': { rate: 0.1, unit: 'units', description: 'Estimated general consumables (ink/vinyl/etc) per shirt' },
+  };
+
   const addOrder = (order) => {
     const newOrder = {
       ...order,
       id: `ORD-${String(orders.length + 1).padStart(3, '0')}`,
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
+
+      apparelItem: order.apparelItem 
     };
     setOrders([...orders, newOrder]);
   };
@@ -37,11 +45,104 @@ export const DataProvider = ({ children }) => {
     setOrders(orders.filter(order => order.id !== id));
   };
 
-  // Inventory functions
+  const calculateMaterialsForOrder = (orderId) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return [];
+
+    const shirtsCount = order.items;
+    const estimatedMaterials = [];
+    
+    
+    const apparelItem = inventory.find(i => i.item === order.apparelItem);
+    
+    if (apparelItem && materialConsumptionRates[apparelItem.category]?.rate === 1) {
+      estimatedMaterials.push({
+        item: apparelItem.item,
+        quantity: shirtsCount, // Consumes 1 unit per item ordered
+        unit: apparelItem.unit,
+        category: apparelItem.category,
+        estimatedPerShirt: 1
+      });
+    }
+
+    inventory.forEach(item => {
+      const category = item.category;
+      
+      if (category === 'Raw Materials') {
+          const config = materialConsumptionRates[category];
+          const estimatedPerShirt = config.rate; 
+          const estimatedQuantity = estimatedPerShirt * shirtsCount;
+          
+          if (estimatedQuantity > 0) {
+              estimatedMaterials.push({
+                item: item.item,
+                quantity: estimatedQuantity,
+                unit: item.unit || config.unit,
+                category: category,
+                estimatedPerShirt: estimatedPerShirt
+              });
+          }
+      }
+    });
+
+    return estimatedMaterials;
+  };
+
+  const completeProductionAndUpdateStock = (orderId, actualMaterialsUsed) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+      console.error('Order not found:', orderId);
+      return;
+    }
+
+    console.log('Completing production for order:', orderId);
+    console.log('Materials to deduct:', actualMaterialsUsed);
+
+    setOrders(prevOrders => 
+      prevOrders.map(o => 
+        o.id === orderId 
+          ? { 
+              ...o, 
+              status: 'completed',
+              materialsUsed: actualMaterialsUsed,
+              completedDate: new Date().toISOString().split('T')[0]
+            }
+          : o
+      )
+    );
+
+    setInventory(prevInventory => {
+      const updatedInventory = prevInventory.map(item => {
+        const usedMaterial = actualMaterialsUsed.find(m => m.item === item.item);
+        
+        if (usedMaterial && usedMaterial.quantity > 0) {
+          const quantityToDeduct = parseFloat(usedMaterial.quantity);
+          const newStock = Math.max(0, item.stock - quantityToDeduct);
+          const usedInProduction = (item.usedInProduction || 0) + quantityToDeduct;
+          
+          console.log(`Updating ${item.item}: ${item.stock} -> ${newStock} (deducted ${quantityToDeduct})`);
+          
+          return {
+            ...item,
+            stock: newStock,
+            usedInProduction: usedInProduction
+          };
+        }
+        return item;
+      });
+      
+      console.log('Inventory updated successfully');
+      return updatedInventory;
+    });
+  };
+
+ 
   const addInventoryItem = (item) => {
     const newItem = {
       ...item,
-      lastOrdered: new Date().toISOString().split('T')[0]
+      id: item.id || `INV-${String(inventory.length + 1).padStart(3, '0')}`,
+      lastOrdered: item.lastOrdered || new Date().toISOString().split('T')[0],
+      usedInProduction: item.usedInProduction || 0
     };
     setInventory([...inventory, newItem]);
   };
@@ -55,17 +156,21 @@ export const DataProvider = ({ children }) => {
   const reorderInventory = (itemName, quantity) => {
     setInventory(inventory.map(item => 
       item.item === itemName 
-        ? { ...item, stock: item.stock + parseInt(quantity) }
+        ? { 
+            ...item, 
+            stock: item.stock + parseInt(quantity),
+            lastOrdered: new Date().toISOString().split('T')[0]
+          }
         : item
     ));
   };
 
-  // Sales data functions
+ 
   const addSalesRecord = (record) => {
     setSalesData([...salesData, record]);
   };
 
-  // Stats calculation
+  
   const totalOrders = orders.length;
   const completedOrders = orders.filter(o => o.status === 'completed').length;
   const totalRevenue = orders.reduce((sum, order) => sum + order.amount, 0);
@@ -82,6 +187,8 @@ export const DataProvider = ({ children }) => {
     addOrder,
     updateOrder,
     deleteOrder,
+    calculateMaterialsForOrder,
+    completeProductionAndUpdateStock,
     addInventoryItem,
     updateInventoryItem,
     reorderInventory,
