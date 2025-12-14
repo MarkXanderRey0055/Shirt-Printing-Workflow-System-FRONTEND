@@ -16,7 +16,7 @@ const Login = ({ onLogin }) => {
         setLoading(true);
 
         if (onLogin) {
-            onLogin(role);
+            onLogin(userType);
         }
 
         navigate('/dashboard');
