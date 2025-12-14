@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, User, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Login = ({ onLogin }) => {
     const [password, setPassword] = useState('');
     const [userType, setUserType] = useState('owner');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
-    /*const [error, setError] = useState('');*/
+
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         setLoading(true);
-        /*setError('');*/
 
         if (onLogin) {
-            onLogin(role); // Pass the selected role to parent
+            onLogin(role);
         }
 
         navigate('/dashboard');
@@ -41,17 +42,6 @@ const Login = ({ onLogin }) => {
                     <h1 className="text-3xl font-bold text-gray-900">PrintFlow</h1>
                     <p className="text-gray-600 mt-2 mb-6">Sublimation and Printing Services</p>
                 
-                    {/*{error && (
-                        <div className="error">
-                            <div className="flex items-center">
-                                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                </svg>
-                                {error}
-                            </div>
-                        </div>
-                    )}*/}
-
                     {/* Login From */}
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* Role Selection */}
