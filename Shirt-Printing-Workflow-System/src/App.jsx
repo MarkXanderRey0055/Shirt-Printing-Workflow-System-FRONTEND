@@ -1,7 +1,9 @@
 import React, {useState} from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
+import { DataProvider } from './context/DataContext.jsx';
 import Login from "../src/Components/Login.jsx";
+import Orders from "./Components/Orders.jsx";
 
 function App() {
   const [userRole, setUserRole] = useState(null);
@@ -15,24 +17,37 @@ function App() {
   };
 
   return (
-    <Router>
-      <main className="bg-[#E0D9D9] min-h-screen">
-        {userRole && <Navbar userRole={userRole} onLogout={handleLogout} />}
+    <DataProvider>
+      <Router>
+        <main className="bg-[#E0D9D9] min-h-screen">
 
-        <Routes>
-          {/* Login Route */}
-          <Route
-            path="/"
-            element={
-              userRole ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />
-            }
-          
-          />
+          {userRole && <Navbar userRole={userRole} onLogout={handleLogout} />}
 
-        </Routes>
+          <Routes>
+            {/* Login Route */}
+            <Route
+              path="/"
+              element={
+                userRole ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />
+              }
+            />
 
-      </main>
-    </Router>
+            {/* Dashboard route */}
+            
+
+            {/* Orders Route */}
+            <Route
+              path="/orders"
+              element={
+                userRole ? <Orders userRole={userRole} /> : <Navigate to="/" />
+              }
+              />
+              
+          </Routes>
+
+        </main>
+      </Router>
+    </DataProvider>
   )
 }
 
