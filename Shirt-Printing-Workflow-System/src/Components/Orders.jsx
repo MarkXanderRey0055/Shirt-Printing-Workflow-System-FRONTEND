@@ -120,7 +120,7 @@ const Orders = ({ userRole }) => {
 
             {/* Add/Edit Order */}
             {showAddForm && (
-                <section className="orderForm bg-black bg-opacity-50">
+                <section className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
                     <article className="bg-white rounded-xl p-8 max-w-md w-full">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-bold text-gray-900">

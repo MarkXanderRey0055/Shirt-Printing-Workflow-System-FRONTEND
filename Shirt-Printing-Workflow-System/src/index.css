@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+section.fixed.inset-0 {
+    z-index: 9999 !important;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
 
 /*Login*/
 .main {
@@ -55,10 +60,6 @@
 
 .orderBtn {
     @apply bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 px-6 rounded-lg transition-colors duration-200;
-}
-
-.orderForm {
-    @apply fixed inset-0 flex items-center justify-center p-4 z-50;
 }
 
 .orderText {
