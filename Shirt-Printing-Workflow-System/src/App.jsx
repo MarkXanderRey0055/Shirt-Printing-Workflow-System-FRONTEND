@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import Login from "../src/Components/Login.jsx";
+import Navbar from "../src/Components/Navbar.jsx";
 
 function App() {
   const [userRole, setUserRole] = useState(null);
