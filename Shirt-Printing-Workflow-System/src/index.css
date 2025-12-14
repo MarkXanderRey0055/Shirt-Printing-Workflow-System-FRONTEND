@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+section.fixed.inset-0 {
+    z-index: 9999 !important;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
 
 /*Login*/
 .main {
@@ -40,9 +45,51 @@
 /*Login*/
 
 
-/*NavBar*/
+/* Orders */
+.createOrderBtn {
+    @apply bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200;
+}
 
-/*NavBar*/
+.orderCon {
+    @apply bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6;
+}
+
+.orderField {
+    @apply border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+.orderBtn {
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 px-6 rounded-lg transition-colors duration-200;
+}
+
+.orderText {
+    @apply w-full p-3 border border-gray-300 rounded-lg;
+}
+
+.orderBtn2 {
+    @apply flex-1 font-semibold py-3 rounded-lg;
+}
+
+.orderTblText {
+    @apply text-left py-4 px-6 text-gray-600 font-semibold;
+}
+
+.orderMini {
+    @apply border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150;
+}
+
+.orderMiniDrop {
+    @apply border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent;
+}
+
+.orderEditBtn {
+    @apply text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200;
+}
+
+.orderDeleteBtn {
+    @apply text-red-600 hover:text-red-800 font-medium transition-colors duration-200;
+}
+/* Orders */
 
 
 /*Dashboard*/
