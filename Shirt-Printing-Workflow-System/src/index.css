@@ -35,7 +35,7 @@
 }
 
 .loginBtn {
-    @apply w-full bg-green-500 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center;
+    @apply w-full bg-green-500 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center;
 }
 /*Login*/
 
