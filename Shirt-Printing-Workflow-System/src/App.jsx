@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 import Login from "../src/Components/Login.jsx";
 import Navbar from "../src/Components/Navbar.jsx";
+import Dashboard from './Components/Dashboard.jsx';
+
 
 function App() {
   const [userRole, setUserRole] = useState(null);
