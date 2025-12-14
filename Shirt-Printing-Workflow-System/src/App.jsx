@@ -33,7 +33,13 @@ function App() {
             />
 
             {/* Dashboard route */}
-            
+            <Route
+              path="/dashboard"
+              element={
+                userRole ? <Dashboard userRole={userRole} /> : <Navigate to="/" />
+              }
+              />
+
 
             {/* Orders Route */}
             <Route
