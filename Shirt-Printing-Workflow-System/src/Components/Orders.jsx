@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const Orders = ({ userRole }) => {
-    // UPDATED: Import new functions and inventory from useData
     const { 
         orders, 
         updateOrder, 
         deleteOrder, 
         addOrder,
-        calculateMaterialsForOrder, // NEW
-        completeProductionAndUpdateStock, // NEW
-        inventory // NEW
+        calculateMaterialsForOrder,
+        completeProductionAndUpdateStock,
+        inventory
     } = useData();
 
-    // NEW: Filter inventory to create apparel options for the dropdown
     const apparelOptions = inventory.filter(item => 
         ['T-Shirt', 'Polo Shirt', 'Jersey'].includes(item.category)
     ).map(item => ({
@@ -25,40 +25,55 @@ const Orders = ({ userRole }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingOrder, setEditingOrder] = useState(null);
-    
-    // NEW STATES for Production Modal
     const [showProductionModal, setShowProductionModal] = useState(null);
     const [materialUsage, setMaterialUsage] = useState([]);
+    const [selectedOrders, setSelectedOrders] = useState([]);
 
-    // UPDATED: Include apparelItem in newOrder state
     const [newOrder, setNewOrder] = useState({
         customer: '',
         design: '',
         items: '',
         amount: '',
         status: 'pending',
-        apparelItem: apparelOptions.length > 0 ? apparelOptions[0].name : '' // Set default
+        apparelItem: apparelOptions.length > 0 ? apparelOptions[0].name : ''
     });
 
     const filteredOrders = orders.filter(order => {
         const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             order.design.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            // UPDATED: Include apparel item in search
                             (order.apparelItem && order.apparelItem.toLowerCase().includes(searchQuery.toLowerCase())); 
         const matchesStatus = selectedStatus === 'all' || order.status === selectedStatus;
         return matchesSearch && matchesStatus;
     });
 
-    // UPDATED: handleAddOrder now includes apparelItem in the payload and reset
     const handleAddOrder = (e) => {
         e.preventDefault();
+        
         if (newOrder.customer && newOrder.design && newOrder.items && newOrder.amount && newOrder.apparelItem) {
-            addOrder({
-                ...newOrder,
-                items: parseInt(newOrder.items),
-                amount: parseFloat(newOrder.amount)
+            // Generate a unique ID for the new order
+            const orderId = `ORD${Date.now()}${Math.floor(Math.random() * 100)}`;
+            const currentDate = new Date().toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
             });
+            
+            const orderToAdd = {
+                id: orderId,
+                customer: newOrder.customer,
+                design: newOrder.design,
+                items: parseInt(newOrder.items),
+                amount: parseFloat(newOrder.amount),
+                status: newOrder.status,
+                apparelItem: newOrder.apparelItem,
+                date: currentDate
+            };
+            
+            console.log('Adding order:', orderToAdd); 
+            
+            addOrder(orderToAdd);
+            
             setNewOrder({ 
                 customer: '', 
                 design: '', 
@@ -68,10 +83,121 @@ const Orders = ({ userRole }) => {
                 apparelItem: apparelOptions.length > 0 ? apparelOptions[0].name : ''
             });
             setShowAddForm(false);
+        } else {
+            alert('Please fill in all required fields');
         }
     };
 
-    // NEW FUNCTION: Handles the final step of production, updating inventory stock
+    const handleSaveEdit = (e) => {
+        e.preventDefault();
+        if (editingOrder && newOrder.customer && newOrder.design && newOrder.items && newOrder.amount && newOrder.apparelItem) {
+            const updatedOrder = {
+                customer: newOrder.customer,
+                design: newOrder.design,
+                items: parseInt(newOrder.items),
+                amount: parseFloat(newOrder.amount),
+                status: newOrder.status,
+                apparelItem: newOrder.apparelItem
+            };
+            
+            console.log('Updating order:', editingOrder.id, updatedOrder);
+            
+            updateOrder(editingOrder.id, updatedOrder);
+            
+            setEditingOrder(null);
+            setNewOrder({ 
+                customer: '', 
+                design: '', 
+                items: '', 
+                amount: '', 
+                status: 'pending',
+                apparelItem: apparelOptions.length > 0 ? apparelOptions[0].name : ''
+            });
+            setShowAddForm(false);
+        } else {
+            alert('Please fill in all required fields');
+        }
+    };
+
+    const exportOrdersToPDF = () => {
+        if (selectedOrders.length === 0) {
+            alert('Please select at least one order to export.');
+            return;
+        }
+
+        const ordersToExport = orders.filter(order => selectedOrders.includes(order.id));
+        
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text('Order Details Report', 14, 20);
+        doc.setFontSize(11);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+        doc.text(`Total Orders: ${ordersToExport.length}`, 14, 36);
+        
+        let yPos = 45;
+        
+        ordersToExport.forEach((order, index) => {
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Order #${index + 1}: ${order.id}`, 14, yPos);
+            yPos += 8;
+            
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'normal');
+            
+            const details = [
+                [`Customer:`, order.customer],
+                [`Design:`, order.design],
+                [`Apparel Item:`, order.apparelItem || 'N/A'],
+                [`Items:`, order.items],
+                [`Status:`, order.status],
+                [`Date:`, order.date],
+                [`Amount:`, userRole === 'owner' ? `P${order.amount}` : 'Hidden']
+            ];
+            
+            details.forEach(([label, value]) => {
+                doc.text(label, 14, yPos);
+                doc.text(value.toString(), 50, yPos);
+                yPos += 6;
+            });
+            
+            if (index < ordersToExport.length - 1) {
+                yPos += 4;
+                doc.setLineWidth(0.2);
+                doc.line(14, yPos, 200, yPos);
+                yPos += 8;
+            }
+        });
+        
+        doc.save(`orders_export_${new Date().toISOString().split('T')[0]}.pdf`);
+        setSelectedOrders([]);
+    };
+
+    const toggleOrderSelection = (orderId) => {
+        setSelectedOrders(prev => {
+            if (prev.includes(orderId)) {
+                return prev.filter(id => id !== orderId);
+            } else {
+                return [...prev, orderId];
+            }
+        });
+    };
+
+    const selectAllFilteredOrders = () => {
+        const filteredIds = filteredOrders.map(order => order.id);
+        setSelectedOrders(filteredIds);
+    };
+
+    const clearAllSelections = () => {
+        setSelectedOrders([]);
+    };
+
     const handleCompleteProduction = () => {
         if (showProductionModal) {
             const actualMaterials = materialUsage.map(m => ({
@@ -86,7 +212,6 @@ const Orders = ({ userRole }) => {
         }
     };
 
-    // UPDATED: handleUpdateOrder now checks for 'completed' and triggers the production modal
     const handleUpdateOrder = (id, status) => {
         if (status === 'completed') {
             const order = orders.find(o => o.id === id);
@@ -103,7 +228,6 @@ const Orders = ({ userRole }) => {
         }
     };
 
-    // UPDATED: handleEditOrder now includes apparelItem
     const handleEditOrder = (order) => {
         setEditingOrder(order);
         setNewOrder({
@@ -117,30 +241,10 @@ const Orders = ({ userRole }) => {
         setShowAddForm(true);
     };
 
-    // UPDATED: handleSaveEdit now includes apparelItem in the payload and reset
-    const handleSaveEdit = (e) => {
-        e.preventDefault();
-        if (editingOrder && newOrder.customer && newOrder.design && newOrder.items && newOrder.amount && newOrder.apparelItem) {
-            updateOrder(editingOrder.id, {
-                customer: newOrder.customer,
-                design: newOrder.design,
-                items: parseInt(newOrder.items),
-                amount: parseFloat(newOrder.amount),
-                status: newOrder.status,
-                apparelItem: newOrder.apparelItem // NEW: Save apparel item
-            });
-            setEditingOrder(null);
-            setNewOrder({ 
-                customer: '', 
-                design: '', 
-                items: '', 
-                amount: '', 
-                status: 'pending',
-                apparelItem: apparelOptions.length > 0 ? apparelOptions[0].name : ''
-            });
-            setShowAddForm(false);
-        }
-    };
+    const updatedFilteredOrders = filteredOrders.map(order => ({
+        ...order,
+        isSelected: selectedOrders.includes(order.id)
+    }));
 
     return (
         <section className="max-w-7xl mx-auto px-3 md:px-6 xl:px-10 space-y-6 md:space-y-8">
@@ -149,7 +253,6 @@ const Orders = ({ userRole }) => {
                     <h1 className="text-4xl font-bold text-gray-900">Design, Order & Quality Control</h1>
                     <p className="text-gray-600 mt-2">Track, manage, and fulfill customer orders</p>
                 </div>
-                {/* UPDATED: Reset apparelItem on button click */}
                 <button onClick={() => {
                     setEditingOrder(null);
                     setNewOrder({ 
@@ -168,7 +271,6 @@ const Orders = ({ userRole }) => {
                 </button>
             </article>
 
-            {/* Filters */}
             <article className="orderCon">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <input
@@ -198,9 +300,35 @@ const Orders = ({ userRole }) => {
                         Apply Filters
                     </button>
                 </div>
+                
+                {selectedOrders.length > 0 && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <span className="font-semibold text-blue-900">
+                                    {selectedOrders.length} order{selectedOrders.length !== 1 ? 's' : ''} selected
+                                </span>
+                                <button 
+                                    onClick={clearAllSelections}
+                                    className="ml-3 text-sm text-blue-600 hover:text-blue-800"
+                                >
+                                    Clear selection
+                                </button>
+                            </div>
+                            <button
+                                onClick={exportOrdersToPDF}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span>Export Selected to PDF</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
             </article>
 
-            {/* NEW: PRODUCTION COMPLETION MODAL */}
             {showProductionModal && (
                 <section className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -303,7 +431,7 @@ const Orders = ({ userRole }) => {
                     </div>
                 </section>
             )}
-            {/* Add/Edit Order - Uses V1 styling for compatibility but V2 functionality */}
+
             {showAddForm && (
                 <section className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
                     <article className="bg-white rounded-xl p-8 max-w-md w-full">
@@ -311,12 +439,10 @@ const Orders = ({ userRole }) => {
                             <h2 className="text-2xl font-bold text-gray-900">
                                 {editingOrder ? 'Edit Order' : 'Create New Order'}
                             </h2>
-
                             <button 
-                                onClick={() =>{
+                                onClick={() => {
                                     setShowAddForm(false);
                                     setEditingOrder(null);
-                                    // UPDATED: Reset apparelItem
                                     setNewOrder({ 
                                         customer: '', 
                                         design: '', 
@@ -333,78 +459,107 @@ const Orders = ({ userRole }) => {
                         </div>
 
                         <form onSubmit={editingOrder ? handleSaveEdit : handleAddOrder} className="space-y-4">
-                            {/* NEW: APPAREL ITEM DROPDOWN */}
                             <div>
-                                <label className="block text-sm text-gray-600 mb-2">Apparel Item</label>
+                                <label className="block text-sm text-gray-600 mb-2">Customer Name *</label>
+                                <input
+                                    type="text"
+                                    placeholder="Customer Name"
+                                    className="orderText"
+                                    value={newOrder.customer}
+                                    onChange={(e) => setNewOrder({...newOrder, customer: e.target.value})}
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-gray-600 mb-2">Design Description *</label>
+                                <input
+                                    type="text"
+                                    placeholder="Design Description"
+                                    className="orderText"
+                                    value={newOrder.design}
+                                    onChange={(e) => setNewOrder({...newOrder, design: e.target.value})}
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-gray-600 mb-2">Apparel Item *</label>
                                 <select 
                                     className="orderText"
                                     value={newOrder.apparelItem}
                                     onChange={(e) => setNewOrder({...newOrder, apparelItem: e.target.value})}
-                                    disabled={apparelOptions.length === 0}
                                     required
                                 >
                                     {apparelOptions.length === 0 ? (
-                                        <option value="">No Apparel Blanks in Inventory</option>
+                                        <option value="">No Apparel Items Available</option>
                                     ) : (
-                                        apparelOptions.map(item => (
-                                            <option key={item.name} value={item.name}>
-                                                {item.name} ({item.category})
-                                            </option>
-                                        ))
+                                        <>
+                                            <option value="">Select an apparel item</option>
+                                            {apparelOptions.map(item => (
+                                                <option key={item.name} value={item.name}>
+                                                    {item.name} ({item.category})
+                                                </option>
+                                            ))}
+                                        </>
                                     )}
                                 </select>
                                 {apparelOptions.length === 0 && (
                                     <p className="text-xs text-red-500 mt-1">
-                                        Please add items with 'T-Shirt', 'Polo Shirt', or 'Jersey' categories in Inventory first.
+                                        Please add apparel items in Inventory first.
                                     </p>
                                 )}
                             </div>
 
-                            <input
-                                type="text"
-                                placeholder="Customer Name"
-                                className="orderText"
-                                value={newOrder.customer}
-                                onChange={(e) => setNewOrder({...newOrder, customer: e.target.value})}
-                                required
-                            />
-                            <input
-                                type="text"
-                                placeholder="Design Description"
-                                className="orderText"
-                                value={newOrder.design}
-                                onChange={(e) => setNewOrder({...newOrder, design: e.target.value})}
-                                required
-                            />
-                            <input
-                                type="text"
-                                placeholder="Number of Items"
-                                className="orderText"
-                                value={newOrder.items}
-                                onChange={(e) => setNewOrder({...newOrder, items: e.target.value})}
-                                required
-                            />
-                            {userRole === 'owner' && (
+                            <div>
+                                <label className="block text-sm text-gray-600 mb-2">Number of Items *</label>
                                 <input
                                     type="number"
-                                    step="0.01"
-                                    placeholder="Total Amount (₱)"
+                                    min="1"
+                                    placeholder="Number of Items"
                                     className="orderText"
-                                    value={newOrder.amount}
-                                    onChange={(e) => setNewOrder({...newOrder, amount: e.target.value})}
+                                    value={newOrder.items}
+                                    onChange={(e) => setNewOrder({...newOrder, items: e.target.value})}
                                     required
                                 />
+                            </div>
+
+                            {userRole === 'owner' && (
+                                <div>
+                                    <label className="block text-sm text-gray-600 mb-2">Total Amount (₱) *</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="Total Amount (₱)"
+                                        className="orderText"
+                                        value={newOrder.amount}
+                                        onChange={(e) => setNewOrder({...newOrder, amount: e.target.value})}
+                                        required
+                                    />
+                                </div>
                             )}
 
-                            <select
-                                className="orderText"
-                                value={newOrder.status}
-                                onChange={(e) => setNewOrder({...newOrder, status: e.target.value})}
-                            >
-                                <option value="pending">Pending</option>
-                                <option value="in-progress">In Progress</option>
-                                <option value="completed">Completed</option>
-                            </select>
+                            <div>
+                                <label className="block text-sm text-gray-600 mb-2">Status</label>
+                                <select
+                                    className="orderText"
+                                    value={newOrder.status}
+                                    onChange={(e) => setNewOrder({...newOrder, status: e.target.value})}
+                                >
+                                    <option value="pending">Pending</option>
+                                    <option value="in-progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                            </div>
+
+                            {!newOrder.customer || !newOrder.design || !newOrder.items || !newOrder.amount || !newOrder.apparelItem ? (
+                                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                    <p className="text-sm text-yellow-800">
+                                        * Please fill in all required fields
+                                    </p>
+                                </div>
+                            ) : null}
 
                             <div className="flex space-x-3 pt-4">
                                 <button
@@ -412,7 +567,6 @@ const Orders = ({ userRole }) => {
                                     onClick={() => {
                                         setShowAddForm(false);
                                         setEditingOrder(null);
-                                        // UPDATED: Reset apparelItem
                                         setNewOrder({ 
                                             customer: '', 
                                             design: '', 
@@ -422,16 +576,15 @@ const Orders = ({ userRole }) => {
                                             apparelItem: apparelOptions.length > 0 ? apparelOptions[0].name : ''
                                         });
                                     }}
-                                    className="orderBtn2 bg-gray-100 hover:bg-gray-200 text-gray-800"
+                                    className="orderBtn2 bg-gray-100 hover:bg-gray-200 text-gray-800 flex-1"
                                 >
                                     Cancel
                                 </button>
 
                                 <button
                                     type="submit"
-                                    className="orderBtn2 bg-blue-600 hover:bg-blue-700 text-white"
-                                    // NEW: Disable button if no apparel item is selected but options exist
-                                    disabled={!newOrder.apparelItem && apparelOptions.length > 0} 
+                                    className="orderBtn2 bg-green-600 hover:bg-green-700 text-white flex-1"
+                                    disabled={!newOrder.customer || !newOrder.design || !newOrder.items || !newOrder.amount || !newOrder.apparelItem}
                                 >
                                     {editingOrder ? 'Save Changes' : 'Create Order'}
                                 </button>
@@ -441,101 +594,120 @@ const Orders = ({ userRole }) => {
                 </section>
             )}
 
-            {/* Orders Table */}
             <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 <article className="overflow-x-auto">
                     {orders.length === 0? (
                         <div className="text-center py-12">
                             <p className="text-gray-500">No orders yet. Create your first order!</p>
                         </div>
-                    ) : filteredOrders.length === 0 ? (
+                    ) : updatedFilteredOrders.length === 0 ? (
                         <div className="text-center py-12">
                             <p className="text-gray-500">No orders match your search criteria.</p>
                         </div>
                     ) : (
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="orderTblText">Order Id</th>
-                                    <th className="orderTblText">Customer</th>
-                                    <th className="orderTblText">Apparel</th> {/* NEW COLUMN */}
-                                    <th className="orderTblText">Design</th>
-                                    <th className="orderTblText">Items</th>
-                                    {userRole === 'owner' && (
-                                        <th className="orderTblText">Amount</th>
-                                    )}
-                                    <th className="orderTblText">Status</th>
-                                    <th className="orderTblText">Date</th>
-                                    <th className="orderTblText">Actions</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {filteredOrders.map(order => (
-                                    <tr key={order.id} className="orderMini">
-                                        <td className="py-4 px-6 font-semibold text-gray-900">{order.id}</td>
-                                        <td className="py-4 px-6 text-gray-700">{order.customer}</td>
-                                        <td className="py-4 px-6 text-gray-700">{order.apparelItem || 'N/A'}</td> {/* NEW DATA CELL */}
-                                        <td className="py-4 px-6 text-gray-700">{order.design}</td>
-                                        <td className="py-4 px-6 text-gray-700">{order.items}</td>
+                        <>
+                            <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+                                <div className="flex items-center space-x-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedOrders.length > 0 && selectedOrders.length === updatedFilteredOrders.length}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                selectAllFilteredOrders();
+                                            } else {
+                                                clearAllSelections();
+                                            }
+                                        }}
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-600">
+                                        Select all {updatedFilteredOrders.length} filtered orders
+                                    </span>
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                    {selectedOrders.length} selected
+                                </div>
+                            </div>
+                            
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-gray-50 border-b border-gray-200">
+                                        <th className="orderTblText w-12">Select</th>
+                                        <th className="orderTblText">Order Id</th>
+                                        <th className="orderTblText">Customer</th>
+                                        <th className="orderTblText">Apparel</th>
+                                        <th className="orderTblText">Design</th>
+                                        <th className="orderTblText">Items</th>
                                         {userRole === 'owner' && (
-                                            <td className="py-4 px-6 font-bold text-gray-900">₱{order.amount}</td>
+                                            <th className="orderTblText">Amount</th>
                                         )}
-                                        <td className="py-4 px-6">
-                                            <select
-                                                className="orderMiniDrop"
-                                                value={order.status}
-                                                onChange={(e) => handleUpdateOrder(order.id, e.target.value)}
-                                            >
-                                                <option value="pending">Pending</option>
-                                                <option value="in-progress">In Progress</option>
-                                                <option value="completed">Completed</option>
-                                            </select>
-                                        </td>
-                                        <td className="py-4 px-6 text-gray-600">{order.date}</td>
-                                        <td className="py-4 px-6">
-                                            <div className="flex space-x-3">
-                                                <button
-                                                    onClick={() => handleEditOrder(order)}
-                                                    className="orderEditBtn"
-                                                >
-                                                    Edit
-                                                </button>
-                                                {/* NEW: Materials button for completed orders */}
-                                                {order.materialsUsed && (
-                                                    <button 
-                                                        onClick={() => {
-                                                            alert(`Materials used:\n${order.materialsUsed.map(m => `${m.item}: ${m.quantity} ${m.unit}`).join('\n')}`);
-                                                        }}
-                                                        className="orderEditBtn text-green-600 hover:text-green-800"
-                                                    >
-                                                        Materials
-                                                    </button>
-                                                )}
-                                                {userRole === 'owner' && (
-                                                    <button
-                                                        onClick={() =>{
-                                                            if(window.confirm('Are you sure you want to delete this order?')){
-                                                                deleteOrder(order.id);
-                                                            }
-                                                        }}
-                                                        className="orderDeleteBtn"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
+                                        <th className="orderTblText">Status</th>
+                                        <th className="orderTblText">Date</th>
+                                        <th className="orderTblText">Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
+                                </thead>
 
-                        </table>
+                                <tbody>
+                                    {updatedFilteredOrders.map(order => (
+                                        <tr key={order.id} className="orderMini">
+                                            <td className="py-4 px-6">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={order.isSelected}
+                                                    onChange={() => toggleOrderSelection(order.id)}
+                                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                                />
+                                            </td>
+                                            <td className="py-4 px-6 font-semibold text-gray-900">{order.id}</td>
+                                            <td className="py-4 px-6 text-gray-700">{order.customer}</td>
+                                            <td className="py-4 px-6 text-gray-700">{order.apparelItem || 'N/A'}</td>
+                                            <td className="py-4 px-6 text-gray-700">{order.design}</td>
+                                            <td className="py-4 px-6 text-gray-700">{order.items}</td>
+                                            {userRole === 'owner' && (
+                                                <td className="py-4 px-6 font-bold text-gray-900">₱{order.amount}</td>
+                                            )}
+                                            <td className="py-4 px-6">
+                                                <select
+                                                    className="orderMiniDrop"
+                                                    value={order.status}
+                                                    onChange={(e) => handleUpdateOrder(order.id, e.target.value)}
+                                                >
+                                                    <option value="pending">Pending</option>
+                                                    <option value="in-progress">In Progress</option>
+                                                    <option value="completed">Completed</option>
+                                                </select>
+                                            </td>
+                                            <td className="py-4 px-6 text-gray-600">{order.date}</td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex space-x-3">
+                                                    <button
+                                                        onClick={() => handleEditOrder(order)}
+                                                        className="orderEditBtn"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    {userRole === 'owner' && (
+                                                        <button
+                                                            onClick={() =>{
+                                                                if(window.confirm('Are you sure you want to delete this order?')){
+                                                                    deleteOrder(order.id);
+                                                                }
+                                                            }}
+                                                            className="orderDeleteBtn"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </>
                     )}
-
                 </article>
             </section>
-            
         </section>
     );
 };
