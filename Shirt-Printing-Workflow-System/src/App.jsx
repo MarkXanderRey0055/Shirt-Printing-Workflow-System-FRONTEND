@@ -5,6 +5,7 @@ import { DataProvider } from './context/DataContext.jsx';
 import Login from "../src/Components/Login.jsx";
 import Orders from "./Components/Orders.jsx";
 import Navbar from "../src/Components/Navbar.jsx";
+import Inventory from "../src/Components/Navbar.jsx";
 import Reports from "../src/Components/Reports.jsx";
 import Dashboard from './Components/Dashboard.jsx';
 
@@ -51,6 +52,14 @@ function App() {
               element={
                 userRole ? <Orders userRole={userRole} /> : <Navigate to="/" />
               }
+              />
+
+              {/* Inventory Route */}
+              <Route
+                path="/inventory"
+                element={
+                  userRole ? <Inventory userRole={userRole} /> : <Navigate to="/" />
+                }
               />
 
               {/* Reports Route */}
