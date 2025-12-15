@@ -7,6 +7,8 @@ import Orders from "./Components/Orders.jsx";
 import Navbar from "../src/Components/Navbar.jsx";
 import Inventory from "../src/Components/Navbar.jsx";
 import Reports from "../src/Components/Reports.jsx";
+import Dashboard from './Components/Dashboard.jsx';
+
 
 function App() {
   const [userRole, setUserRole] = useState(null);
