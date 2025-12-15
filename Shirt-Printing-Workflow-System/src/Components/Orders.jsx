@@ -202,7 +202,7 @@ const Orders = ({ userRole }) => {
 
             {/* NEW: PRODUCTION COMPLETION MODAL */}
             {showProductionModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <section className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-bold text-gray-900">Complete Production</h2>
@@ -301,7 +301,7 @@ const Orders = ({ userRole }) => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </section>
             )}
             {/* Add/Edit Order - Uses V1 styling for compatibility but V2 functionality */}
             {showAddForm && (
